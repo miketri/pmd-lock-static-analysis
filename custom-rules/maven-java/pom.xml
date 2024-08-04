@@ -144,6 +144,5 @@
 
   <modules>
     <module>pmd-java-custom</module>
-    <module>pmd-java-dist</module>
   </modules>
 </project>

@@ -12,17 +12,26 @@ Rule set which defines MyRule
     <rule name="MyRule"
           language="java"
           class="net.sourceforge.pmd.examples.java.rules.MyRule"
-          message="Avoid the identifier ''{0}''.">
+          message="{0}"
+    >
         <description>
-Don't use the identifier name 'foo'. Use a real name instead, that explains, what the
-variable is used for.
+Ensure all calls to lock() of the Lock interface are followed by Lock.unlock() in a finally block.
         </description>
         <priority>1</priority>
         <example>
 <![CDATA[
-public class Example {
-    String foo; // bad
-    String city; // better
+class GoodExample implements Example {
+    private final Lock lock = new ReentrantLock();
+
+    public void foo() {
+        lock.lock();
+        try {
+            System.out.println("Foo");
+        } finally {
+            lock.unlock();
+        }
+    }
+
 }
 ]]>
         </example>

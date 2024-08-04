@@ -4,23 +4,40 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://pmd.sourceforge.net/rule-tests http://pmd.sourceforge.net/rule-tests_1_0_0.xsd">
     <test-code>
-        <description>Positive case - identifier foo is used</description>
-        <expected-problems>1</expected-problems>
+        <description>Positive case - Lock used without unlocking.</description>
+        <expected-problems>2</expected-problems>
         <expected-messages>
-            <message>Avoid the identifier 'foo'.</message>
+            <message>Lock.lock() should have finally block in the same block.</message>
+            <message>Lock.lock() should have unlock() called.</message>
         </expected-messages>
         <code><![CDATA[
-public class Example {
-    String foo;
+class BadExample {
+    private final Lock lock = new ReentrantLock();
+
+    public void foo() {
+        lock.lock();
+        System.out.println("Foo");
+    }
+
 }
      ]]></code>
     </test-code>
     <test-code>
-        <description>Negative case - no identifier foo</description>
+        <description>Negative case - unlock used.</description>
         <expected-problems>0</expected-problems>
         <code><![CDATA[
-public class Example {
-    String city;
+class GoodExample {
+    private final Lock lock = new ReentrantLock();
+
+    public void foo() {
+        lock.lock();
+        try {
+            System.out.println("Foo");
+        } finally {
+            lock.unlock();
+        }
+    }
+
 }
      ]]></code>
     </test-code>
