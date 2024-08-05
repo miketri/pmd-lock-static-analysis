@@ -6,6 +6,7 @@ import net.sourceforge.pmd.lang.java.types.TypeTestUtil;
 import net.sourceforge.pmd.lang.java.rule.AbstractJavaRule;
 
 import java.util.*;
+import java.util.concurrent.locks.Lock;
 
 public class MyRule extends AbstractJavaRule {
     Set<String> heapLocks = new HashSet<>(); // Track lock variable assignments
@@ -29,20 +30,13 @@ public class MyRule extends AbstractJavaRule {
     }
 
     @Override
-    public Object visit(final ASTClassType node, final Object data) {
-        // find if field declaration by checking parent
-        //todo: do we have to check further ancestors?
-        Node parent = node.getParent();
-        if (parent instanceof ASTFieldDeclaration) {
-            ASTFieldDeclaration fieldDecl = (ASTFieldDeclaration) parent;
-//            if (TypeTestUtil.isA(Lock.class, node)) {//todo: why doesn't this check work?
-            if (TypeTestUtil.isA("Lock", node)) {
-                // get ASTVariableDeclarator child
-                ASTVariableDeclarator child = fieldDecl.firstChild(ASTVariableDeclarator.class);
-                if (child != null) {
-                    String lockName = (child).getName();
-                    heapLocks.add(lockName);
-                }
+    public Object visit(final ASTFieldDeclaration node, final Object data) {
+        if (TypeTestUtil.isA(Lock.class, node.getTypeNode())) {
+            // get ASTVariableDeclarator child
+            ASTVariableDeclarator child = node.firstChild(ASTVariableDeclarator.class);
+            if (child != null) {
+                String lockName = (child).getName();
+                heapLocks.add(lockName);
             }
         }
 
@@ -52,7 +46,7 @@ public class MyRule extends AbstractJavaRule {
     @Override
     public Object visit(final ASTLocalVariableDeclaration node, final Object data) {
         // is there a better way to keep track of variable assignments?
-        if (TypeTestUtil.isA("Lock", node.getTypeNode())) {
+        if (TypeTestUtil.isA(Lock.class, node.getTypeNode())) {
             System.out.println("local lock");
             ASTVariableDeclarator variableDeclarator = node.descendants(ASTVariableDeclarator.class).first();
             if (variableDeclarator != null) {
