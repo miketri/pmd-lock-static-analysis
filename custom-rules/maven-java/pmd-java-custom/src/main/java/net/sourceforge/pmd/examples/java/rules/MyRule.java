@@ -1,6 +1,5 @@
 package net.sourceforge.pmd.examples.java.rules;
 
-import net.sourceforge.pmd.lang.ast.Node;
 import net.sourceforge.pmd.lang.java.ast.*;
 import net.sourceforge.pmd.lang.java.types.TypeTestUtil;
 import net.sourceforge.pmd.lang.java.rule.AbstractJavaRule;
@@ -9,7 +8,7 @@ import java.util.*;
 import java.util.concurrent.locks.Lock;
 
 public class MyRule extends AbstractJavaRule {
-    Set<String> heapLocks = new HashSet<>(); // Track lock variable assignments
+    Set<String> classLocks = new HashSet<>(); // Track lock variable assignments
     Stack<Set<String>> localLocks = new Stack<>();
 
 
@@ -36,7 +35,7 @@ public class MyRule extends AbstractJavaRule {
             ASTVariableDeclarator child = node.firstChild(ASTVariableDeclarator.class);
             if (child != null) {
                 String lockName = (child).getName();
-                heapLocks.add(lockName);
+                classLocks.add(lockName);
             }
         }
 
@@ -64,7 +63,7 @@ public class MyRule extends AbstractJavaRule {
             // need to get calling object
             ASTVariableAccess variableAccess = (ASTVariableAccess) node.getFirstChild(); //should be ASTVariableAccess
             String variableName = variableAccess.getName();
-            if (heapLocks.contains(variableName) || this.lockInCurrentContext(variableName)) {
+            if (classLocks.contains(variableName) || this.lockInCurrentContext(variableName)) {
                 // need to look through the rest of the code block to see if the lock is released
                 // todo: do we need to do a full traversal back up to check for the enclosing block? or will it always be the parent?
                 boolean finallyClauseFound = false;
