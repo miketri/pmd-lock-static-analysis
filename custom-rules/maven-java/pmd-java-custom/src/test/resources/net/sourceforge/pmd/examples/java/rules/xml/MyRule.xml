@@ -41,4 +41,24 @@ class GoodExample {
 }
      ]]></code>
     </test-code>
+    <test-code>
+        <description>Positive case - lock aliased.</description>
+        <expected-problems>2</expected-problems>
+        <expected-messages>
+            <message>Lock.lock() should have finally block in the same block.</message>
+            <message>Lock.lock() should have unlock() called.</message>
+        </expected-messages>
+        <code><![CDATA[
+class HarderExample {
+    private final Lock lock = new ReentrantLock();
+
+    public void foo() {
+        Lock temp = lock;
+        String lock = "Foo";
+        temp.lock();
+        System.out.println(lock);
+    }
+}
+     ]]></code>
+    </test-code>
 </test-data>

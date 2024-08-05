@@ -2,19 +2,31 @@ package net.sourceforge.pmd.examples.java.rules;
 
 import net.sourceforge.pmd.lang.ast.Node;
 import net.sourceforge.pmd.lang.java.ast.*;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import net.sourceforge.pmd.lang.java.types.TypeTestUtil;
 import net.sourceforge.pmd.lang.java.rule.AbstractJavaRule;
-import net.sourceforge.pmd.lang.rule.RuleTargetSelector;
-import net.sourceforge.pmd.properties.PropertyDescriptor;
-import net.sourceforge.pmd.properties.PropertyFactory;
 
 import java.util.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class MyRule extends AbstractJavaRule {
-    Map<String, Boolean> classLockNames = new HashMap<>(); //keep track of lock variable name : locked
+    Set<String> heapLocks = new HashSet<>(); // Track lock variable assignments
+    Stack<Set<String>> localLocks = new Stack<>();
+
+
+    private void addLockToCurrentContext(String lockVariableName) {
+        localLocks.peek().add(lockVariableName);
+    }
+
+    private boolean lockInCurrentContext(String lockVariableName) {
+        return localLocks.peek().contains(lockVariableName);
+    }
+
+    @Override
+    public Object visit(ASTBlock node, Object data) {
+        localLocks.push(new HashSet<>());
+        Object result = super.visit(node, data);
+        localLocks.pop();
+        return result;
+    }
 
     @Override
     public Object visit(final ASTClassType node, final Object data) {
@@ -26,11 +38,10 @@ public class MyRule extends AbstractJavaRule {
 //            if (TypeTestUtil.isA(Lock.class, node)) {//todo: why doesn't this check work?
             if (TypeTestUtil.isA("Lock", node)) {
                 // get ASTVariableDeclarator child
-                for (Node child : fieldDecl) {
-                    if (child instanceof ASTVariableId) {
-                        String lockName = ((ASTVariableId) child).getName();
-                        classLockNames.put(lockName, true);
-                    }
+                ASTVariableDeclarator child = fieldDecl.firstChild(ASTVariableDeclarator.class);
+                if (child != null) {
+                    String lockName = (child).getName();
+                    heapLocks.add(lockName);
                 }
             }
         }
@@ -39,15 +50,27 @@ public class MyRule extends AbstractJavaRule {
     }
 
     @Override
+    public Object visit(final ASTLocalVariableDeclaration node, final Object data) {
+        // is there a better way to keep track of variable assignments?
+        if (TypeTestUtil.isA("Lock", node.getTypeNode())) {
+            System.out.println("local lock");
+            ASTVariableDeclarator variableDeclarator = node.descendants(ASTVariableDeclarator.class).first();
+            if (variableDeclarator != null) {
+                String variableName = variableDeclarator.getName();
+                this.addLockToCurrentContext(variableName);
+            }
+        }
+        return super.visit(node, data);
+    }
+
+    @Override
     public Object visit(final ASTMethodCall node, final Object data) {
         // objects should be allocated already at this point
         if (node.getMethodName().equals("lock")) {
-            System.out.println(classLockNames);
             // need to get calling object
             ASTVariableAccess variableAccess = (ASTVariableAccess) node.getFirstChild(); //should be ASTVariableAccess
             String variableName = variableAccess.getName();
-            if (classLockNames.containsKey(variableName)) {
-                classLockNames.put(variableName, true);
+            if (heapLocks.contains(variableName) || this.lockInCurrentContext(variableName)) {
                 // need to look through the rest of the code block to see if the lock is released
                 // todo: do we need to do a full traversal back up to check for the enclosing block? or will it always be the parent?
                 boolean finallyClauseFound = false;
@@ -55,9 +78,9 @@ public class MyRule extends AbstractJavaRule {
                 ASTBlock enclosingBlock = variableAccess.ancestors(ASTBlock.class).first();
                 if (enclosingBlock != null) {
                     // check the same variable unlocks in block
-                    // look for finally block
-                    ASTFinallyClause finallyClause = enclosingBlock.descendants(ASTFinallyClause.class).first();
-                    if (finallyClause != null) {
+                    // go over all the try statements, one of them should have FinallyClause
+                    List<ASTFinallyClause> finallyClauses = enclosingBlock.children(ASTTryStatement.class).children(ASTFinallyClause.class).toList();
+                    for (ASTFinallyClause finallyClause : finallyClauses) {
                         finallyClauseFound = true;
                         // check if unlock in finally
                         unlocked = finallyClause.descendants(ASTMethodCall.class)
