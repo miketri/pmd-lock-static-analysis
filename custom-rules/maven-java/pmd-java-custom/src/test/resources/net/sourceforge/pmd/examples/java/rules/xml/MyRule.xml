@@ -26,6 +26,55 @@ class BadExample {
      ]]></code>
     </test-code>
     <test-code>
+        <description>Positive case - unlock outside of finally.</description>
+        <expected-problems>2</expected-problems>
+        <expected-messages>
+            <message>Lock.lock() should have finally block in the same block.</message>
+            <message>Lock.unlock() should be called in a finally block.</message>
+        </expected-messages>
+        <code><![CDATA[
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+class BadExample {
+    private final Lock lock = new ReentrantLock();
+
+    public void foo() {
+        lock.lock();
+        System.out.println("Foo");
+        lock.unlock();
+    }
+
+}
+     ]]></code>
+    </test-code>
+    <test-code>
+        <description>Positive case - Finally block present, but unlocked outside it</description>
+        <expected-problems>1</expected-problems>
+        <expected-messages>
+            <message>Lock.unlock() should be called in a finally block.</message>
+        </expected-messages>
+        <code><![CDATA[
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+class BadExample {
+    private final Lock lock = new ReentrantLock();
+
+    public void foo() {
+        lock.lock();
+        try {
+            System.out.println("Foo");
+        } finally {
+
+        }
+        lock.unlock();
+    }
+
+}
+     ]]></code>
+    </test-code>
+    <test-code>
         <description>Negative case - unlock used.</description>
         <expected-problems>0</expected-problems>
         <code><![CDATA[
@@ -86,6 +135,76 @@ class Example {
 
     public void foo() {
         Door lock = new Door();
+        lock.lock();
+    }
+}
+     ]]></code>
+    </test-code>
+    <test-code>
+        <description>Positive case - Custom lock implementation</description>
+        <expected-problems>2</expected-problems>
+        <expected-messages>
+            <message>Lock.lock() should have finally block in the same block.</message>
+            <message>Lock.lock() should have unlock() called.</message>
+        </expected-messages>
+        <code><![CDATA[
+import java.util.concurrent.locks.Lock;
+
+class NestedCustom {
+    static class CustomLock implements Lock {
+
+        @Override
+        public void lock() {
+
+        }
+
+        @Override
+        public void lockInterruptibly() throws InterruptedException {
+
+        }
+
+        @Override
+        public boolean tryLock() {
+            return false;
+        }
+
+        @Override
+        public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
+            return false;
+        }
+
+        @Override
+        public void unlock() {
+
+        }
+
+        @Override
+        public Condition newCondition() {
+            return null;
+        }
+    }
+
+    private final CustomLock lock = new CustomLock();
+
+    public void foo() {
+        lock.lock();
+    }
+}
+     ]]></code>
+    </test-code>
+    <test-code>
+        <description>Positive case - Local lock</description>
+        <expected-problems>2</expected-problems>
+        <expected-messages>
+            <message>Lock.lock() should have finally block in the same block.</message>
+            <message>Lock.lock() should have unlock() called.</message>
+        </expected-messages>
+        <code><![CDATA[
+import java.util.concurrent.locks.Lock;
+
+class LocalLock {
+    public void local() {
+        Lock lock = new ReentrantLock();
         lock.lock();
     }
 }
