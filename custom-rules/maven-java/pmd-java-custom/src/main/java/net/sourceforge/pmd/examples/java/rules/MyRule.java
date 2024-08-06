@@ -1,5 +1,6 @@
 package net.sourceforge.pmd.examples.java.rules;
 
+import net.sourceforge.pmd.lang.ast.NodeStream;
 import net.sourceforge.pmd.lang.java.ast.*;
 import net.sourceforge.pmd.lang.java.types.TypeTestUtil;
 import net.sourceforge.pmd.lang.java.rule.AbstractJavaRule;
@@ -73,7 +74,7 @@ public class MyRule extends AbstractJavaRule {
                 if (enclosingBlock != null) {
                     // check the same variable unlocks in block
                     // go over all the try statements, one of them should have FinallyClause
-                    List<ASTFinallyClause> finallyClauses = enclosingBlock.children(ASTTryStatement.class).children(ASTFinallyClause.class).toList();
+                    NodeStream<ASTFinallyClause> finallyClauses = enclosingBlock.children(ASTTryStatement.class).children(ASTFinallyClause.class);
                     finallyClauseFound = !finallyClauses.isEmpty();
 
                     if (!finallyClauseFound) {
@@ -92,8 +93,8 @@ public class MyRule extends AbstractJavaRule {
                         }
                     } else {
                         //there was a finally block
-                        unlocked = finallyClauses.stream()
-                                .anyMatch(finallyClause ->
+                        unlocked = finallyClauses
+                                .any(finallyClause ->
                                         finallyClause.descendants(ASTMethodCall.class)
                                                 .any(astMethodCall ->
                                                         UNLOCK_METHOD_NAME.equals(astMethodCall.getMethodName()) &&
