@@ -52,7 +52,7 @@ def checkViolation(nodes: list[BlockTreeNode], acquire: bool, release: bool):
         lock = acquire or n.acquire
         unlock = release or n.release
         if len(n.children) == 0 and lock and not unlock:
-            print(f"Error: Acquire without release detected, name: {n.name}, byte {n.start}")
+            print(f"Error: Acquire without release detected, name: {n.name}, line {n.node.start_point.row}")
         elif len(n.children) > 0:
             checkViolation(n.children, lock, unlock)
 
@@ -66,7 +66,12 @@ public class MutexDemo {
     public static void main(String[] args) {
         mutex.acquire();
         if (true) {
-            mutex.release();
+            if (false) {
+                System.out.Println("foo");
+            }
+            else {
+                mutex.release();
+            }
         }
         else {
             System.out.Println("foo");
@@ -107,7 +112,7 @@ for i in [i[1] for i in caps if i[0] == 0]:
     if i["type"].text == b"Semaphore":
         sem_name = i["ident"].text.decode('utf-8')
 
-print(f"Semaphore: {sem_name}")
+print(f"Semaphore variable name: {sem_name}")
 
 for i in [i[1] for i in caps if i[0] == 1]:
     methods.append(BlockTreeNode(i["method"].text.decode('utf-8'), i["method"], i["body"].start_byte, i["body"].end_byte))
